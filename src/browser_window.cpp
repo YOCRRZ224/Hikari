@@ -1,19 +1,49 @@
 #include "browser_window.hpp"
 #include "sidebar.hpp"
 #include "tab_manager.hpp"
+#include <algorithm>
 #include <string>
 #include <webkit/webkit.h>
 
 static GtkWidget* address_bar = nullptr;
+static GtkWidget* load_progress = nullptr;
+static GtkWidget* back_button = nullptr;
+static GtkWidget* forward_button = nullptr;
+static GtkWidget* reload_button = nullptr;
 static GtkWindow* browser_window = nullptr;
+
+static void on_tab_progress(BrowserTab* tab)
+{
+    WebKitWebView* view = WEBKIT_WEB_VIEW(tab->web_view);
+    const bool loading = webkit_web_view_is_loading(view);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(load_progress), webkit_web_view_get_estimated_load_progress(view));
+    gtk_widget_set_visible(load_progress, loading);
+    gtk_widget_set_sensitive(back_button, webkit_web_view_can_go_back(view));
+    gtk_widget_set_sensitive(forward_button, webkit_web_view_can_go_forward(view));
+    gtk_button_set_icon_name(GTK_BUTTON(reload_button), loading ? "process-stop-symbolic" : "view-refresh-symbolic");
+    gtk_widget_set_tooltip_text(reload_button, loading ? "Stop loading" : "Reload");
+}
 
 static void on_tab_changed(BrowserTab* tab)
 {
     const char* uri = webkit_web_view_get_uri(WEBKIT_WEB_VIEW(tab->web_view));
-    gtk_editable_set_text(GTK_EDITABLE(address_bar), uri ? uri : "");
+    if (!gtk_widget_has_focus(address_bar))
+        gtk_editable_set_text(GTK_EDITABLE(address_bar), uri ? uri : "");
+    const bool secure = uri && g_str_has_prefix(uri, "https://");
+    gtk_entry_set_icon_from_icon_name(
+        GTK_ENTRY(address_bar),
+        GTK_ENTRY_ICON_PRIMARY,
+        secure ? "changes-prevent-symbolic" : "system-search-symbolic"
+    );
+    gtk_entry_set_icon_tooltip_text(
+        GTK_ENTRY(address_bar),
+        GTK_ENTRY_ICON_PRIMARY,
+        secure ? "Secure connection" : "Search or site address"
+    );
 
     const char* title = webkit_web_view_get_title(WEBKIT_WEB_VIEW(tab->web_view));
     gtk_window_set_title(browser_window, title && *title ? title : "Yocrrz Browser");
+
 }
 
 static void on_back_clicked(
@@ -51,8 +81,14 @@ static void on_reload_clicked(
     (void)user_data;
 
     BrowserTab* tab = browser_tab_current();
-    if (tab)
-        webkit_web_view_reload(WEBKIT_WEB_VIEW(tab->web_view));
+    if (!tab)
+        return;
+
+    WebKitWebView* view = WEBKIT_WEB_VIEW(tab->web_view);
+    if (webkit_web_view_is_loading(view))
+        webkit_web_view_stop_loading(view);
+    else
+        webkit_web_view_reload(view);
 }
 
 static void on_address_activate(
@@ -76,9 +112,9 @@ static void on_address_activate(
     {
         if (uri.find(' ') != std::string::npos)
         {
-            uri =
-                "https://www.google.com/search?q=" +
-                uri;
+            gchar* encoded = g_uri_escape_string(text, nullptr, FALSE);
+            uri = "https://www.google.com/search?q=" + std::string(encoded ? encoded : "");
+            g_free(encoded);
         }
         else
         {
@@ -106,6 +142,12 @@ static gboolean on_key_pressed(
     if (!(state & GDK_CONTROL_MASK))
         return FALSE;
 
+    if (keyval == GDK_KEY_ISO_Left_Tab)
+    {
+        browser_tab_select_relative(-1);
+        return TRUE;
+    }
+
     switch (gdk_keyval_to_lower(keyval))
     {
         case GDK_KEY_t:
@@ -118,6 +160,40 @@ static gboolean on_key_pressed(
             gtk_widget_grab_focus(address_bar);
             gtk_editable_select_region(GTK_EDITABLE(address_bar), 0, -1);
             return TRUE;
+        case GDK_KEY_Tab:
+            browser_tab_select_relative(state & GDK_SHIFT_MASK ? -1 : 1);
+            return TRUE;
+        case GDK_KEY_r:
+        {
+            BrowserTab* tab = browser_tab_current();
+            if (tab)
+            {
+                if (state & GDK_SHIFT_MASK)
+                    webkit_web_view_reload_bypass_cache(WEBKIT_WEB_VIEW(tab->web_view));
+                else
+                    webkit_web_view_reload(WEBKIT_WEB_VIEW(tab->web_view));
+            }
+            return TRUE;
+        }
+        case GDK_KEY_plus:
+        case GDK_KEY_equal:
+        case GDK_KEY_minus:
+        {
+            BrowserTab* tab = browser_tab_current();
+            if (!tab)
+                return TRUE;
+            WebKitWebView* view = WEBKIT_WEB_VIEW(tab->web_view);
+            const double delta = gdk_keyval_to_lower(keyval) == GDK_KEY_minus ? -0.1 : 0.1;
+            webkit_web_view_set_zoom_level(view, std::clamp(webkit_web_view_get_zoom_level(view) + delta, 0.5, 3.0));
+            return TRUE;
+        }
+        case GDK_KEY_0:
+        {
+            BrowserTab* tab = browser_tab_current();
+            if (tab)
+                webkit_web_view_set_zoom_level(WEBKIT_WEB_VIEW(tab->web_view), 1.0);
+            return TRUE;
+        }
         default:
             return FALSE;
     }
@@ -169,6 +245,7 @@ void on_application_activate(
     gtk_widget_set_vexpand(tab_stack, TRUE);
     tab_manager_init(tab_stack, sidebar_tab_container());
     tab_manager_set_changed_callback(on_tab_changed);
+    tab_manager_set_progress_callback(on_tab_progress);
 
     gtk_box_append(
         GTK_BOX(root),
@@ -223,18 +300,18 @@ void on_application_activate(
      * Back
      */
 
-    GtkWidget* back =
+    back_button =
         gtk_button_new_from_icon_name(
             "go-previous-symbolic"
         );
 
     gtk_widget_set_tooltip_text(
-        back,
+        back_button,
         "Back"
     );
 
     g_signal_connect(
-        back,
+        back_button,
         "clicked",
         G_CALLBACK(on_back_clicked),
         nullptr
@@ -242,25 +319,25 @@ void on_application_activate(
 
     gtk_box_append(
         GTK_BOX(navigation),
-        back
+        back_button
     );
 
     /*
      * Forward
      */
 
-    GtkWidget* forward =
+    forward_button =
         gtk_button_new_from_icon_name(
             "go-next-symbolic"
         );
 
     gtk_widget_set_tooltip_text(
-        forward,
+        forward_button,
         "Forward"
     );
 
     g_signal_connect(
-        forward,
+        forward_button,
         "clicked",
         G_CALLBACK(on_forward_clicked),
         nullptr
@@ -268,25 +345,25 @@ void on_application_activate(
 
     gtk_box_append(
         GTK_BOX(navigation),
-        forward
+        forward_button
     );
 
     /*
      * Reload
      */
 
-    GtkWidget* reload =
+    reload_button =
         gtk_button_new_from_icon_name(
             "view-refresh-symbolic"
         );
 
     gtk_widget_set_tooltip_text(
-        reload,
+        reload_button,
         "Reload"
     );
 
     g_signal_connect(
-        reload,
+        reload_button,
         "clicked",
         G_CALLBACK(on_reload_clicked),
         nullptr
@@ -294,7 +371,7 @@ void on_application_activate(
 
     gtk_box_append(
         GTK_BOX(navigation),
-        reload
+        reload_button
     );
 
     /*
@@ -336,6 +413,11 @@ gtk_box_append(
         navigation
     );
 
+    load_progress = gtk_progress_bar_new();
+    gtk_widget_add_css_class(load_progress, "load-progress");
+    gtk_widget_set_visible(load_progress, FALSE);
+    gtk_box_append(GTK_BOX(browser), load_progress);
+
     gtk_box_append(
         GTK_BOX(browser),
         tab_stack
@@ -355,10 +437,17 @@ gtk_box_append(
     gtk_css_provider_load_from_data(
         styles,
         ".sidebar { background: alpha(@theme_fg_color, 0.04); border-right: 1px solid @borders; }"
-        ".navigation-bar { background: @theme_bg_color; border-bottom: 1px solid @borders; }"
-        ".address-entry { border-radius: 10px; min-height: 34px; }"
-        ".tab-button { min-height: 36px; padding: 2px 8px; }"
-        ".tab-button.selected { background: alpha(@accent_color, 0.15); }",
+        ".brand-name { font-weight: 700; }"
+        ".section-label { opacity: 0.62; font-size: 10px; font-weight: 700; }"
+        ".navigation-bar { background: @theme_bg_color; border-bottom: 1px solid @borders; padding: 2px 4px; }"
+        ".navigation-bar button { border-radius: 9px; }"
+        ".address-entry { border-radius: 10px; min-height: 36px; }"
+        ".address-entry:focus { border-color: @accent_color; }"
+        ".load-progress { min-height: 2px; }"
+        ".load-progress trough, .load-progress progress { min-height: 2px; }"
+        ".tab-button { min-height: 38px; padding: 2px 8px; border-radius: 9px; }"
+        ".tab-button.selected { background: alpha(@accent_color, 0.15); }"
+        ".tab-button.playing-audio { color: @accent_color; }",
         -1
     );
     gtk_style_context_add_provider_for_display(
@@ -369,6 +458,7 @@ gtk_box_append(
     g_object_unref(styles);
 
     GtkEventController* keys = gtk_event_controller_key_new();
+    gtk_event_controller_set_propagation_phase(keys, GTK_PHASE_CAPTURE);
     g_signal_connect(keys, "key-pressed", G_CALLBACK(on_key_pressed), nullptr);
     gtk_widget_add_controller(GTK_WIDGET(window), keys);
 

@@ -8,11 +8,15 @@ struct BrowserTab
     GtkWidget* row;
     GtkWidget* button;
     GtkWidget* close_button;
+    GtkWidget* media_button;
+    GtkWidget* play_button;
+    GtkWidget* mute_button;
     GtkWidget* web_view;
     GtkWidget* label;
 };
 
 using BrowserTabChangedCallback = void (*)(BrowserTab* tab);
+using BrowserTabProgressCallback = void (*)(BrowserTab* tab);
 
 void tab_manager_init(
     GtkWidget* stack,
@@ -21,6 +25,10 @@ void tab_manager_init(
 
 void tab_manager_set_changed_callback(
     BrowserTabChangedCallback callback
+);
+
+void tab_manager_set_progress_callback(
+    BrowserTabProgressCallback callback
 );
 
 void tab_manager_set_sidebar_compact(
@@ -37,6 +45,10 @@ void browser_tab_select(
 
 void browser_tab_close(
     BrowserTab* tab
+);
+
+void browser_tab_select_relative(
+    int direction
 );
 
 BrowserTab* browser_tab_current();
