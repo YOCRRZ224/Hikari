@@ -11,6 +11,7 @@ static GtkWidget* back_button = nullptr;
 static GtkWidget* forward_button = nullptr;
 static GtkWidget* reload_button = nullptr;
 static GtkWindow* browser_window = nullptr;
+static bool window_is_fullscreen = false;
 
 static void on_tab_progress(BrowserTab* tab)
 {
@@ -90,6 +91,39 @@ static void on_reload_clicked(
         webkit_web_view_stop_loading(view);
     else
         webkit_web_view_reload(view);
+}
+
+static void on_minimize_clicked(GtkButton* button, gpointer user_data)
+{
+    (void)button;
+    (void)user_data;
+    gtk_window_minimize(browser_window);
+}
+
+static void on_fullscreen_clicked(GtkButton* button, gpointer user_data)
+{
+    (void)user_data;
+    window_is_fullscreen = !window_is_fullscreen;
+    if (window_is_fullscreen)
+        gtk_window_fullscreen(browser_window);
+    else
+        gtk_window_unfullscreen(browser_window);
+
+    gtk_button_set_icon_name(
+        button,
+        window_is_fullscreen ? "view-restore-symbolic" : "view-fullscreen-symbolic"
+    );
+    gtk_widget_set_tooltip_text(
+        GTK_WIDGET(button),
+        window_is_fullscreen ? "Exit fullscreen" : "Enter fullscreen"
+    );
+}
+
+static void on_close_window_clicked(GtkButton* button, gpointer user_data)
+{
+    (void)button;
+    (void)user_data;
+    gtk_window_close(browser_window);
 }
 
 static void on_address_activate(
@@ -405,6 +439,26 @@ gtk_box_append(
     address_bar
 );
 
+    GtkWidget* window_controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
+    gtk_widget_add_css_class(window_controls, "window-controls");
+
+    GtkWidget* minimize_button = gtk_button_new_from_icon_name("window-minimize-symbolic");
+    gtk_widget_set_tooltip_text(minimize_button, "Minimize window");
+    g_signal_connect(minimize_button, "clicked", G_CALLBACK(on_minimize_clicked), nullptr);
+    gtk_box_append(GTK_BOX(window_controls), minimize_button);
+
+    GtkWidget* fullscreen_button = gtk_button_new_from_icon_name("view-fullscreen-symbolic");
+    gtk_widget_set_tooltip_text(fullscreen_button, "Enter fullscreen");
+    g_signal_connect(fullscreen_button, "clicked", G_CALLBACK(on_fullscreen_clicked), nullptr);
+    gtk_box_append(GTK_BOX(window_controls), fullscreen_button);
+
+    GtkWidget* close_window_button = gtk_button_new_from_icon_name("window-close-symbolic");
+    gtk_widget_set_tooltip_text(close_window_button, "Close window");
+    gtk_widget_add_css_class(close_window_button, "close-window-button");
+    g_signal_connect(close_window_button, "clicked", G_CALLBACK(on_close_window_clicked), nullptr);
+    gtk_box_append(GTK_BOX(window_controls), close_window_button);
+    gtk_box_append(GTK_BOX(navigation), window_controls);
+
     /*
      * Browser
      */
@@ -444,6 +498,10 @@ gtk_box_append(
         ".section-label { opacity: 0.62; font-size: 10px; font-weight: 700; }"
         ".navigation-bar { background: @theme_bg_color; border-bottom: 1px solid @borders; padding: 2px 4px; }"
         ".navigation-bar button { border-radius: 9px; }"
+        ".window-controls { opacity: 0; transition: opacity 150ms ease; }"
+        ".window-controls:hover { opacity: 1; }"
+        ".window-controls button { min-width: 32px; min-height: 32px; padding: 0; }"
+        ".window-controls .close-window-button:hover { color: @error_color; }"
         ".address-entry { border-radius: 10px; min-height: 36px; }"
         ".address-entry:focus { border-color: @accent_color; }"
         ".load-progress { min-height: 2px; }"

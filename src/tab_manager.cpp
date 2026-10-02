@@ -106,6 +106,7 @@ static void update_media_controls(BrowserTab* tab)
     WebKitWebView* view = WEBKIT_WEB_VIEW(tab->web_view);
     const bool playing = webkit_web_view_is_playing_audio(view);
     const bool muted = webkit_web_view_get_is_muted(view);
+    gtk_widget_set_visible(tab->media_button, playing && !sidebar_compact);
 
     gtk_button_set_label(GTK_BUTTON(tab->play_button), playing ? "Pause media" : "Play media");
     gtk_button_set_label(GTK_BUTTON(tab->mute_button), muted ? "Unmute tab audio" : "Mute tab audio");
@@ -173,7 +174,10 @@ void tab_manager_set_sidebar_compact(bool compact)
     for (BrowserTab* tab : tabs)
     {
         gtk_widget_set_visible(tab->close_button, !compact);
-        gtk_widget_set_visible(tab->media_button, !compact);
+        gtk_widget_set_visible(
+            tab->media_button,
+            !compact && webkit_web_view_is_playing_audio(WEBKIT_WEB_VIEW(tab->web_view))
+        );
     }
 }
 
@@ -256,7 +260,7 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
     gtk_menu_button_set_popover(GTK_MENU_BUTTON(tab->media_button), media_popover);
     g_signal_connect(tab->play_button, "clicked", G_CALLBACK(on_media_play_clicked), tab);
     g_signal_connect(tab->mute_button, "clicked", G_CALLBACK(on_media_mute_clicked), tab);
-    gtk_widget_set_visible(tab->media_button, !sidebar_compact);
+    gtk_widget_set_visible(tab->media_button, FALSE);
 
     tab->close_button = gtk_button_new_from_icon_name("window-close-symbolic");
     gtk_widget_set_visible(tab->close_button, !sidebar_compact);
