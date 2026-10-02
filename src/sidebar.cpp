@@ -1,108 +1,71 @@
 #include "sidebar.hpp"
+#include "tab_manager.hpp"
 
 static GtkWidget* tab_list = nullptr;
+static GtkWidget* sidebar_widget = nullptr;
+static GtkWidget* new_tab_button = nullptr;
+static bool sidebar_compact = false;
+
+static void on_new_tab_clicked(GtkButton* button, gpointer user_data)
+{
+    (void)button;
+    (void)user_data;
+    browser_tab_create("https://example.com");
+}
+
+static void on_sidebar_toggle_clicked(GtkButton* button, gpointer user_data)
+{
+    (void)button;
+    (void)user_data;
+
+    sidebar_compact = !sidebar_compact;
+    gtk_widget_set_size_request(sidebar_widget, sidebar_compact ? 56 : 240, -1);
+    gtk_widget_set_visible(new_tab_button, !sidebar_compact);
+    tab_manager_set_sidebar_compact(sidebar_compact);
+}
 
 GtkWidget* create_sidebar()
 {
-    GtkWidget* sidebar =
+    sidebar_widget =
         gtk_box_new(
             GTK_ORIENTATION_VERTICAL,
-            6
+            8
         );
 
     gtk_widget_set_size_request(
-        sidebar,
-        72,
+        sidebar_widget,
+        240,
         -1
     );
+    gtk_widget_add_css_class(sidebar_widget, "sidebar");
 
-    /*
-     * New tab button
-     */
+    GtkWidget* header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    gtk_widget_set_margin_top(header, 8);
+    gtk_widget_set_margin_start(header, 8);
+    gtk_widget_set_margin_end(header, 8);
+    gtk_box_append(GTK_BOX(sidebar_widget), header);
 
-    GtkWidget* new_tab =
-        gtk_button_new_from_icon_name(
-            "list-add-symbolic"
-        );
+    GtkWidget* collapse = gtk_button_new_from_icon_name("sidebar-show-symbolic");
+    gtk_widget_set_tooltip_text(collapse, "Collapse sidebar");
+    g_signal_connect(collapse, "clicked", G_CALLBACK(on_sidebar_toggle_clicked), nullptr);
+    gtk_box_append(GTK_BOX(header), collapse);
 
-    gtk_widget_set_tooltip_text(
-        new_tab,
-        "New Tab"
-    );
+    new_tab_button = gtk_button_new_from_icon_name("list-add-symbolic");
+    gtk_widget_set_tooltip_text(new_tab_button, "New tab (Ctrl+T)");
+    gtk_widget_set_hexpand(new_tab_button, TRUE);
+    g_signal_connect(new_tab_button, "clicked", G_CALLBACK(on_new_tab_clicked), nullptr);
+    gtk_box_append(GTK_BOX(header), new_tab_button);
 
-    gtk_box_append(
-        GTK_BOX(sidebar),
-        new_tab
-    );
+    tab_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_widget_set_vexpand(tab_list, TRUE);
+    gtk_widget_set_margin_start(tab_list, 8);
+    gtk_widget_set_margin_end(tab_list, 8);
+    gtk_box_append(GTK_BOX(sidebar_widget), tab_list);
 
-    /*
-     * Tab list
-     */
-
-    tab_list =
-        gtk_box_new(
-            GTK_ORIENTATION_VERTICAL,
-            4
-        );
-
-    gtk_widget_set_vexpand(
-        tab_list,
-        TRUE
-    );
-
-    gtk_box_append(
-        GTK_BOX(sidebar),
-        tab_list
-    );
-
-    /*
-     * Settings
-     */
-
-    GtkWidget* spacer =
-        gtk_box_new(
-            GTK_ORIENTATION_VERTICAL,
-            0
-        );
-
-    gtk_widget_set_vexpand(
-        spacer,
-        TRUE
-    );
-
-    gtk_box_append(
-        GTK_BOX(sidebar),
-        spacer
-    );
-
-    GtkWidget* settings =
-        gtk_button_new_from_icon_name(
-            "emblem-system-symbolic"
-        );
-
-    gtk_widget_set_tooltip_text(
-        settings,
-        "Settings"
-    );
-
-    gtk_box_append(
-        GTK_BOX(sidebar),
-        settings
-    );
-
-    return sidebar;
+    return sidebar_widget;
 }
 
-void sidebar_add_tab(
-    BrowserTab* tab
-)
+GtkWidget* sidebar_tab_container()
 {
-    (void)tab;
-}
-
-void sidebar_select_tab(
-    BrowserTab* tab
-)
-{
-    (void)tab;
+    return tab_list;
 }

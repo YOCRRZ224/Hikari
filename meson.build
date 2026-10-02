@@ -18,6 +18,7 @@ executable(
     'src/main.cpp',
     'src/browser_window.cpp',
     'src/sidebar.cpp',
+    'src/tab_manager.cpp',
     'src/browser_view.cpp',
   ],
   dependencies: [

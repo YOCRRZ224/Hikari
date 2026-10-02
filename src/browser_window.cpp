@@ -1,10 +1,20 @@
 #include "browser_window.hpp"
 #include "sidebar.hpp"
-#include "browser_view.hpp"
+#include "tab_manager.hpp"
 #include <string>
 #include <webkit/webkit.h>
 
 static GtkWidget* address_bar = nullptr;
+static GtkWindow* browser_window = nullptr;
+
+static void on_tab_changed(BrowserTab* tab)
+{
+    const char* uri = webkit_web_view_get_uri(WEBKIT_WEB_VIEW(tab->web_view));
+    gtk_editable_set_text(GTK_EDITABLE(address_bar), uri ? uri : "");
+
+    const char* title = webkit_web_view_get_title(WEBKIT_WEB_VIEW(tab->web_view));
+    gtk_window_set_title(browser_window, title && *title ? title : "Yocrrz Browser");
+}
 
 static void on_back_clicked(
     GtkButton* button,
@@ -14,7 +24,9 @@ static void on_back_clicked(
     (void)button;
     (void)user_data;
 
-    browser_go_back();
+    BrowserTab* tab = browser_tab_current();
+    if (tab && webkit_web_view_can_go_back(WEBKIT_WEB_VIEW(tab->web_view)))
+        webkit_web_view_go_back(WEBKIT_WEB_VIEW(tab->web_view));
 }
 
 static void on_forward_clicked(
@@ -25,7 +37,9 @@ static void on_forward_clicked(
     (void)button;
     (void)user_data;
 
-    browser_go_forward();
+    BrowserTab* tab = browser_tab_current();
+    if (tab && webkit_web_view_can_go_forward(WEBKIT_WEB_VIEW(tab->web_view)))
+        webkit_web_view_go_forward(WEBKIT_WEB_VIEW(tab->web_view));
 }
 
 static void on_reload_clicked(
@@ -36,7 +50,9 @@ static void on_reload_clicked(
     (void)button;
     (void)user_data;
 
-    browser_reload();
+    BrowserTab* tab = browser_tab_current();
+    if (tab)
+        webkit_web_view_reload(WEBKIT_WEB_VIEW(tab->web_view));
 }
 
 static void on_address_activate(
@@ -70,7 +86,41 @@ static void on_address_activate(
         }
     }
 
-    browser_load_uri(uri.c_str());
+    BrowserTab* tab = browser_tab_current();
+    if (tab)
+        webkit_web_view_load_uri(WEBKIT_WEB_VIEW(tab->web_view), uri.c_str());
+}
+
+static gboolean on_key_pressed(
+    GtkEventControllerKey* controller,
+    guint keyval,
+    guint keycode,
+    GdkModifierType state,
+    gpointer user_data
+)
+{
+    (void)controller;
+    (void)keycode;
+    (void)user_data;
+
+    if (!(state & GDK_CONTROL_MASK))
+        return FALSE;
+
+    switch (gdk_keyval_to_lower(keyval))
+    {
+        case GDK_KEY_t:
+            browser_tab_create("https://example.com");
+            return TRUE;
+        case GDK_KEY_w:
+            browser_tab_close(browser_tab_current());
+            return TRUE;
+        case GDK_KEY_l:
+            gtk_widget_grab_focus(address_bar);
+            gtk_editable_select_region(GTK_EDITABLE(address_bar), 0, -1);
+            return TRUE;
+        default:
+            return FALSE;
+    }
 }
 
 void on_application_activate(
@@ -87,6 +137,8 @@ void on_application_activate(
         ADW_APPLICATION_WINDOW(
             adw_application_window_new(app)
         );
+
+    browser_window = GTK_WINDOW(window);
 
     gtk_window_set_default_size(
         GTK_WINDOW(window),
@@ -111,6 +163,12 @@ void on_application_activate(
 
     GtkWidget* sidebar =
         create_sidebar();
+
+    GtkWidget* tab_stack = gtk_stack_new();
+    gtk_widget_set_hexpand(tab_stack, TRUE);
+    gtk_widget_set_vexpand(tab_stack, TRUE);
+    tab_manager_init(tab_stack, sidebar_tab_container());
+    tab_manager_set_changed_callback(on_tab_changed);
 
     gtk_box_append(
         GTK_BOX(root),
@@ -159,6 +217,7 @@ void on_application_activate(
         navigation,
         8
     );
+    gtk_widget_add_css_class(navigation, "navigation-bar");
 
     /*
      * Back
@@ -254,11 +313,7 @@ gtk_entry_set_placeholder_text(
     GTK_ENTRY(address_bar),
     "Search or enter address"
 );
-
-gtk_editable_set_text(
-    GTK_EDITABLE(address_bar),
-    "https://example.com"
-);
+gtk_widget_add_css_class(address_bar, "address-entry");
 
 g_signal_connect(
     address_bar,
@@ -276,9 +331,6 @@ gtk_box_append(
      * Browser
      */
 
-    GtkWidget* web_view =
-        create_browser_view();
-
     gtk_box_append(
         GTK_BOX(browser),
         navigation
@@ -286,7 +338,7 @@ gtk_box_append(
 
     gtk_box_append(
         GTK_BOX(browser),
-        web_view
+        tab_stack
     );
 
     gtk_box_append(
@@ -298,6 +350,29 @@ gtk_box_append(
         window,
         root
     );
+
+    GtkCssProvider* styles = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(
+        styles,
+        ".sidebar { background: alpha(@theme_fg_color, 0.04); border-right: 1px solid @borders; }"
+        ".navigation-bar { background: @theme_bg_color; border-bottom: 1px solid @borders; }"
+        ".address-entry { border-radius: 10px; min-height: 34px; }"
+        ".tab-button { min-height: 36px; padding: 2px 8px; }"
+        ".tab-button.selected { background: alpha(@accent_color, 0.15); }",
+        -1
+    );
+    gtk_style_context_add_provider_for_display(
+        gdk_display_get_default(),
+        GTK_STYLE_PROVIDER(styles),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
+    g_object_unref(styles);
+
+    GtkEventController* keys = gtk_event_controller_key_new();
+    g_signal_connect(keys, "key-pressed", G_CALLBACK(on_key_pressed), nullptr);
+    gtk_widget_add_controller(GTK_WIDGET(window), keys);
+
+    browser_tab_create("https://example.com");
 
     gtk_window_present(
         GTK_WINDOW(window)
