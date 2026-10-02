@@ -12,7 +12,7 @@ struct BrowserTab
     GtkWidget* play_button;
     GtkWidget* mute_button;
     GtkWidget* web_view;
-    WebKitWebContext* web_context;
+    WebKitNetworkSession* network_session;
     WebKitUserContentManager* user_content_manager;
     GtkWidget* content;
     GtkWidget* favicon;

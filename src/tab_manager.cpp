@@ -14,7 +14,7 @@ static BrowserTabChangedCallback changed_callback = nullptr;
 static BrowserTabProgressCallback progress_callback = nullptr;
 static unsigned int next_tab_id = 0;
 static bool sidebar_compact = false;
-static WebKitWebContext* private_web_context = nullptr;
+static WebKitNetworkSession* private_network_session = nullptr;
 static size_t private_tab_count = 0;
 
 static const char* home_page_html = R"HTML(
@@ -226,14 +226,14 @@ static BrowserTab* create_tab(const char* uri, bool is_home, bool is_private = f
     tab->user_content_manager = userscript_manager_create_content_manager();
     if (is_private)
     {
-        if (!private_web_context)
-            private_web_context = webkit_web_context_new_ephemeral();
+        if (!private_network_session)
+            private_network_session = webkit_network_session_new_ephemeral();
         ++private_tab_count;
-        tab->web_context = private_web_context;
+        tab->network_session = private_network_session;
         tab->web_view = GTK_WIDGET(g_object_new(
             WEBKIT_TYPE_WEB_VIEW,
-            "web-context",
-            tab->web_context,
+            "network-session",
+            tab->network_session,
             "user-content-manager",
             tab->user_content_manager,
             nullptr
@@ -241,13 +241,16 @@ static BrowserTab* create_tab(const char* uri, bool is_home, bool is_private = f
     }
     else
     {
-        tab->web_context = webkit_web_context_get_default();
+        tab->network_session = webkit_network_session_get_default();
         tab->web_view = GTK_WIDGET(g_object_new(
             WEBKIT_TYPE_WEB_VIEW,
+            "network-session",
+            tab->network_session,
             "user-content-manager",
             tab->user_content_manager,
             nullptr
         ));
+    }
     }
 
     gtk_widget_set_hexpand(
@@ -430,7 +433,7 @@ void browser_tab_close(BrowserTab* tab)
     tabs.erase(found);
 
     if (tab->is_private && --private_tab_count == 0)
-        g_clear_object(&private_web_context);
+        g_clear_object(&private_network_session);
 
     if (was_current)
     {
