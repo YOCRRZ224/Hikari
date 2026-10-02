@@ -13,6 +13,7 @@ struct BrowserTab
     GtkWidget* mute_button;
     GtkWidget* web_view;
     GtkWidget* label;
+    bool is_home;
 };
 
 using BrowserTabChangedCallback = void (*)(BrowserTab* tab);
@@ -38,6 +39,8 @@ void tab_manager_set_sidebar_compact(
 BrowserTab* browser_tab_create(
     const char* uri
 );
+
+BrowserTab* browser_tab_create_home();
 
 void browser_tab_select(
     BrowserTab* tab

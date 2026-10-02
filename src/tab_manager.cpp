@@ -14,6 +14,57 @@ static BrowserTabProgressCallback progress_callback = nullptr;
 static unsigned int next_tab_id = 0;
 static bool sidebar_compact = false;
 
+static const char* home_page_html = R"HTML(
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New Tab | Yocrrz</title>
+<style>
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; color: #252b32; background: #f4f6f5; }
+main { width: min(780px, calc(100% - 40px)); margin: 0 auto; padding: 12vh 0 64px; }
+.brand { color: #286b61; font-size: 13px; font-weight: 700; }
+h1 { margin: 12px 0 6px; font-size: 34px; font-weight: 650; }
+.date { margin: 0 0 30px; color: #66716f; }
+.search { display: flex; gap: 10px; padding: 8px; border: 1px solid #d6dedb; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px #172e2910; }
+.search input { flex: 1; min-width: 0; padding: 10px 12px; border: 0; outline: 0; background: transparent; font: inherit; }
+.search button { padding: 0 18px; border: 0; border-radius: 10px; color: white; background: #286b61; font: inherit; cursor: pointer; }
+.widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+.widget { min-height: 130px; padding: 18px; border: 1px solid #dce3e0; border-radius: 12px; background: #fff; }
+.widget h2 { margin: 0 0 14px; color: #66716f; font-size: 12px; font-weight: 700; }
+.time { color: #286b61; font-size: 30px; font-variant-numeric: tabular-nums; }
+.links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.links a { padding: 10px; border-radius: 8px; color: inherit; background: #f2f5f3; text-decoration: none; }
+.links a:hover { background: #e6efec; }
+@media (prefers-color-scheme: dark) { body { color: #e6ebe9; background: #202624; } .date, .widget h2 { color: #aebbb7; } .search, .widget { border-color: #3d4945; background: #29312e; } .links a { background: #343e3a; } .links a:hover { background: #3c4b45; } }
+@media (max-width: 560px) { main { padding-top: 9vh; } .widgets { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+</style>
+</head>
+<body>
+<main>
+<div class="brand">YOCRRZ BROWSER</div>
+<h1>Where to next?</h1>
+<p class="date" id="date"></p>
+<form class="search" action="https://www.google.com/search" method="get">
+<input name="q" type="search" placeholder="Search the web or enter an address" autofocus aria-label="Search the web">
+<button type="submit">Search</button>
+</form>
+<section class="widgets" aria-label="Widgets">
+<article class="widget"><h2>LOCAL TIME</h2><div class="time" id="time"></div><div id="timezone"></div></article>
+<article class="widget"><h2>QUICK LINKS</h2><nav class="links"><a href="https://www.wikipedia.org">Wikipedia</a><a href="https://github.com">GitHub</a><a href="https://www.youtube.com">YouTube</a><a href="https://news.ycombinator.com">Hacker News</a></nav></article>
+</section>
+</main>
+<script>
+const updateClock = () => { const now = new Date(); document.getElementById('time').textContent = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}); document.getElementById('date').textContent = now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'}); document.getElementById('timezone').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone; };
+updateClock(); setInterval(updateClock, 30000);
+</script>
+</body>
+</html>
+)HTML";
+
 static void on_tab_title_changed(GObject* object, GParamSpec* pspec, gpointer user_data)
 {
     (void)pspec;
@@ -26,9 +77,11 @@ static void on_tab_title_changed(GObject* object, GParamSpec* pspec, gpointer us
 
 static void on_tab_uri_changed(GObject* object, GParamSpec* pspec, gpointer user_data)
 {
-    (void)object;
     (void)pspec;
     auto* tab = static_cast<BrowserTab*>(user_data);
+    const char* uri = webkit_web_view_get_uri(WEBKIT_WEB_VIEW(object));
+    if (tab->is_home && uri && g_strcmp0(uri, "about:blank") != 0)
+        tab->is_home = false;
     if (tab == current_tab && changed_callback)
         changed_callback(tab);
 }
@@ -137,12 +190,11 @@ static void on_tab_clicked(
     browser_tab_select(tab);
 }
 
-BrowserTab* browser_tab_create(
-    const char* uri
-)
+static BrowserTab* create_tab(const char* uri, bool is_home)
 {
     auto* tab =
         new BrowserTab{};
+    tab->is_home = is_home;
 
     tab->web_view =
         webkit_web_view_new();
@@ -234,14 +286,24 @@ BrowserTab* browser_tab_create(
     tabs.push_back(tab);
     update_media_controls(tab);
 
-    webkit_web_view_load_uri(
-        WEBKIT_WEB_VIEW(tab->web_view),
-        uri
-    );
+    if (is_home)
+        webkit_web_view_load_html(WEBKIT_WEB_VIEW(tab->web_view), home_page_html, "about:blank");
+    else
+        webkit_web_view_load_uri(WEBKIT_WEB_VIEW(tab->web_view), uri);
 
     browser_tab_select(tab);
 
     return tab;
+}
+
+BrowserTab* browser_tab_create(const char* uri)
+{
+    return create_tab(uri, false);
+}
+
+BrowserTab* browser_tab_create_home()
+{
+    return create_tab(nullptr, true);
 }
 
 void browser_tab_select(
@@ -288,7 +350,7 @@ void browser_tab_close(BrowserTab* tab)
     {
         current_tab = nullptr;
         if (tabs.empty())
-            browser_tab_create("https://example.com");
+            browser_tab_create_home();
         else
             browser_tab_select(tabs[std::min(index, tabs.size() - 1)]);
     }

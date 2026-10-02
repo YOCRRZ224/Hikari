@@ -28,7 +28,7 @@ static void on_tab_changed(BrowserTab* tab)
 {
     const char* uri = webkit_web_view_get_uri(WEBKIT_WEB_VIEW(tab->web_view));
     if (!gtk_widget_has_focus(address_bar))
-        gtk_editable_set_text(GTK_EDITABLE(address_bar), uri ? uri : "");
+        gtk_editable_set_text(GTK_EDITABLE(address_bar), tab->is_home ? "" : uri ? uri : "");
     const bool secure = uri && g_str_has_prefix(uri, "https://");
     gtk_entry_set_icon_from_icon_name(
         GTK_ENTRY(address_bar),
@@ -43,6 +43,7 @@ static void on_tab_changed(BrowserTab* tab)
 
     const char* title = webkit_web_view_get_title(WEBKIT_WEB_VIEW(tab->web_view));
     gtk_window_set_title(browser_window, title && *title ? title : "Yocrrz Browser");
+    sidebar_update_current_tab(tab);
 
 }
 
@@ -151,7 +152,7 @@ static gboolean on_key_pressed(
     switch (gdk_keyval_to_lower(keyval))
     {
         case GDK_KEY_t:
-            browser_tab_create("https://example.com");
+            browser_tab_create_home();
             return TRUE;
         case GDK_KEY_w:
             browser_tab_close(browser_tab_current());
@@ -461,7 +462,7 @@ gtk_box_append(
     g_signal_connect(keys, "key-pressed", G_CALLBACK(on_key_pressed), nullptr);
     gtk_widget_add_controller(GTK_WIDGET(window), keys);
 
-    browser_tab_create("https://example.com");
+    browser_tab_create_home();
 
     gtk_window_present(
         GTK_WINDOW(window)
