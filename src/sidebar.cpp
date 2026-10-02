@@ -10,6 +10,7 @@ static GtkWidget* sidebar_widget = nullptr;
 static GtkWidget* new_tab_button = nullptr;
 static GtkWidget* brand_label = nullptr;
 static GtkWidget* section_label = nullptr;
+static GtkWidget* section_header = nullptr;
 static GtkWidget* section_revealer = nullptr;
 static GtkWidget* section_toggle = nullptr;
 static GtkWidget* sidebar_toggle = nullptr;
@@ -112,7 +113,11 @@ static void add_bookmark_row(const std::string& title, const std::string& uri)
     bookmarks.push_back({title, uri, nullptr});
     Bookmark* bookmark = &bookmarks.back();
     GtkWidget* row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    GtkWidget* open = gtk_button_new_with_label(title.c_str());
+    GtkWidget* open = gtk_button_new();
+    GtkWidget* label = gtk_label_new(title.c_str());
+    gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
+    gtk_widget_set_halign(label, GTK_ALIGN_START);
+    gtk_button_set_child(GTK_BUTTON(open), label);
     gtk_widget_set_hexpand(open, TRUE);
     gtk_widget_set_halign(open, GTK_ALIGN_FILL);
     gtk_widget_set_tooltip_text(open, uri.c_str());
@@ -168,13 +173,20 @@ static void on_sidebar_toggle_clicked(GtkButton* button, gpointer user_data)
     (void)user_data;
 
     sidebar_compact = !sidebar_compact;
-    gtk_widget_set_size_request(sidebar_widget, sidebar_compact ? 56 : 240, -1);
+    gtk_widget_set_size_request(sidebar_widget, sidebar_compact ? 48 : 188, -1);
+    if (sidebar_compact)
+        gtk_widget_add_css_class(sidebar_widget, "compact");
+    else
+        gtk_widget_remove_css_class(sidebar_widget, "compact");
     gtk_widget_set_visible(new_tab_button, !sidebar_compact);
     gtk_widget_set_visible(brand_label, !sidebar_compact);
     gtk_widget_set_visible(section_label, !sidebar_compact);
     gtk_widget_set_visible(bookmark_label, !sidebar_compact);
     gtk_widget_set_visible(bookmark_section_header, !sidebar_compact);
     gtk_widget_set_visible(bookmark_revealer, !sidebar_compact);
+    gtk_widget_set_margin_start(section_header, sidebar_compact ? 4 : 12);
+    gtk_widget_set_margin_end(section_header, sidebar_compact ? 4 : 8);
+    gtk_widget_set_size_request(section_toggle, sidebar_compact ? 32 : -1, sidebar_compact ? 32 : -1);
     gtk_image_set_from_icon_name(
         GTK_IMAGE(gtk_button_get_child(GTK_BUTTON(sidebar_toggle))),
         sidebar_compact ? "sidebar-show-symbolic" : "sidebar-hide-symbolic"
@@ -241,11 +253,9 @@ GtkWidget* create_sidebar()
             8
         );
 
-    gtk_widget_set_size_request(
-        sidebar_widget,
-        40,
-        -1
-    );
+    gtk_widget_set_size_request(sidebar_widget, 188, -1);
+    gtk_widget_set_hexpand(sidebar_widget, FALSE);
+    gtk_widget_set_halign(sidebar_widget, GTK_ALIGN_START);
     gtk_widget_add_css_class(sidebar_widget, "sidebar");
 
     GtkWidget* header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
@@ -255,6 +265,8 @@ GtkWidget* create_sidebar()
     gtk_box_append(GTK_BOX(sidebar_widget), header);
 
     sidebar_toggle = gtk_button_new_from_icon_name("sidebar-hide-symbolic");
+    gtk_widget_add_css_class(sidebar_toggle, "sidebar-toggle");
+    gtk_widget_set_size_request(sidebar_toggle, 32, 32);
     gtk_widget_set_tooltip_text(sidebar_toggle, "Collapse sidebar");
     g_signal_connect(sidebar_toggle, "clicked", G_CALLBACK(on_sidebar_toggle_clicked), nullptr);
     gtk_box_append(GTK_BOX(header), sidebar_toggle);
@@ -270,7 +282,7 @@ GtkWidget* create_sidebar()
     g_signal_connect(new_tab_button, "clicked", G_CALLBACK(on_new_tab_clicked), nullptr);
     gtk_box_append(GTK_BOX(header), new_tab_button);
 
-    GtkWidget* section_header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    section_header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     gtk_widget_set_margin_top(section_header, 8);
     gtk_widget_set_margin_start(section_header, 12);
     gtk_widget_set_margin_end(section_header, 8);

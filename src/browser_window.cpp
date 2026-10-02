@@ -437,7 +437,9 @@ gtk_box_append(
     GtkCssProvider* styles = gtk_css_provider_new();
     gtk_css_provider_load_from_string(
         styles,
-        ".sidebar { background: alpha(@theme_fg_color, 0.04); border-right: 1px solid @borders; }"
+        ".sidebar { min-width: 188px; max-width: 188px; background: alpha(@theme_fg_color, 0.04); border-right: 1px solid @borders; }"
+        ".sidebar.compact { min-width: 48px; max-width: 48px; }"
+        ".sidebar.compact .sidebar-toggle { min-width: 32px; max-width: 32px; min-height: 32px; max-height: 32px; padding: 0; }"
         ".brand-name { font-weight: 700; }"
         ".section-label { opacity: 0.62; font-size: 10px; font-weight: 700; }"
         ".navigation-bar { background: @theme_bg_color; border-bottom: 1px solid @borders; padding: 2px 4px; }"
