@@ -71,8 +71,25 @@ static void on_tab_title_changed(GObject* object, GParamSpec* pspec, gpointer us
     auto* tab = static_cast<BrowserTab*>(user_data);
     const char* title = webkit_web_view_get_title(WEBKIT_WEB_VIEW(object));
     gtk_label_set_text(GTK_LABEL(tab->label), title && *title ? title : "New Tab");
+    gtk_widget_set_tooltip_text(tab->button, title && *title ? title : "New Tab");
     if (tab == current_tab && changed_callback)
         changed_callback(tab);
+}
+
+static void update_tab_favicon(BrowserTab* tab)
+{
+    cairo_surface_t* favicon = webkit_web_view_get_favicon(WEBKIT_WEB_VIEW(tab->web_view));
+    if (favicon)
+        gtk_image_set_from_surface(GTK_IMAGE(tab->favicon), favicon);
+    else
+        gtk_image_set_from_icon_name(GTK_IMAGE(tab->favicon), "web-browser-symbolic");
+}
+
+static void on_tab_favicon_changed(GObject* object, GParamSpec* pspec, gpointer user_data)
+{
+    (void)object;
+    (void)pspec;
+    update_tab_favicon(static_cast<BrowserTab*>(user_data));
 }
 
 static void on_tab_uri_changed(GObject* object, GParamSpec* pspec, gpointer user_data)
@@ -173,6 +190,8 @@ void tab_manager_set_sidebar_compact(bool compact)
     sidebar_compact = compact;
     for (BrowserTab* tab : tabs)
     {
+        gtk_widget_set_visible(tab->label, !compact);
+        gtk_widget_set_halign(tab->content, compact ? GTK_ALIGN_CENTER : GTK_ALIGN_FILL);
         gtk_widget_set_visible(tab->close_button, !compact);
         gtk_widget_set_visible(
             tab->media_button,
@@ -213,7 +232,17 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
         TRUE
     );
 
+    tab->content = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_widget_set_hexpand(tab->content, TRUE);
+    gtk_widget_set_halign(tab->content, sidebar_compact ? GTK_ALIGN_CENTER : GTK_ALIGN_FILL);
+
+    tab->favicon = gtk_image_new_from_icon_name("web-browser-symbolic");
+    gtk_image_set_pixel_size(GTK_IMAGE(tab->favicon), 16);
+    gtk_box_append(GTK_BOX(tab->content), tab->favicon);
+
     tab->label = gtk_label_new("New Tab");
+    gtk_widget_set_visible(tab->label, !sidebar_compact);
+    gtk_box_append(GTK_BOX(tab->content), tab->label);
 
     gtk_label_set_ellipsize(
         GTK_LABEL(tab->label),
@@ -227,7 +256,7 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
 
     gtk_button_set_child(
         GTK_BUTTON(tab->button),
-        tab->label
+        tab->content
     );
     gtk_widget_set_halign(tab->label, GTK_ALIGN_START);
 
@@ -282,6 +311,7 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
 
     g_signal_connect(tab->web_view, "notify::title", G_CALLBACK(on_tab_title_changed), tab);
     g_signal_connect(tab->web_view, "notify::uri", G_CALLBACK(on_tab_uri_changed), tab);
+    g_signal_connect(tab->web_view, "notify::favicon", G_CALLBACK(on_tab_favicon_changed), tab);
     g_signal_connect(tab->web_view, "notify::is-playing-audio", G_CALLBACK(on_media_state_changed), tab);
     g_signal_connect(tab->web_view, "notify::is-muted", G_CALLBACK(on_media_state_changed), tab);
     g_signal_connect(tab->web_view, "notify::estimated-load-progress", G_CALLBACK(on_tab_load_changed), tab);
@@ -289,6 +319,7 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
 
     tabs.push_back(tab);
     update_media_controls(tab);
+    update_tab_favicon(tab);
 
     if (is_home)
         webkit_web_view_load_html(WEBKIT_WEB_VIEW(tab->web_view), home_page_html, "about:blank");

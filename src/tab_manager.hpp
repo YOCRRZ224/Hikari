@@ -12,6 +12,8 @@ struct BrowserTab
     GtkWidget* play_button;
     GtkWidget* mute_button;
     GtkWidget* web_view;
+    GtkWidget* content;
+    GtkWidget* favicon;
     GtkWidget* label;
     bool is_home;
 };

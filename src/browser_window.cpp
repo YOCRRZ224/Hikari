@@ -141,20 +141,33 @@ static void on_address_activate(
     if (!text || !*text)
         return;
 
-    std::string uri = text;
-
-    if (uri.find("://") == std::string::npos)
+    gchar* trimmed_text = g_strdup(text);
+    g_strstrip(trimmed_text);
+    if (!*trimmed_text)
     {
-        if (uri.find(' ') != std::string::npos)
-        {
-            gchar* encoded = g_uri_escape_string(text, nullptr, FALSE);
-            uri = "https://www.google.com/search?q=" + std::string(encoded ? encoded : "");
-            g_free(encoded);
-        }
-        else
-        {
-            uri = "https://" + uri;
-        }
+        g_free(trimmed_text);
+        return;
+    }
+
+    std::string uri = trimmed_text;
+    g_free(trimmed_text);
+
+    const bool looks_like_url =
+        uri.find("://") != std::string::npos ||
+        uri.find('/') != std::string::npos ||
+        uri.find('.') != std::string::npos ||
+        uri == "localhost" ||
+        uri.rfind("localhost:", 0) == 0;
+
+    if (!looks_like_url)
+    {
+        gchar* encoded = g_uri_escape_string(uri.c_str(), nullptr, FALSE);
+        uri = "https://www.google.com/search?q=" + std::string(encoded ? encoded : "");
+        g_free(encoded);
+    }
+    else if (uri.find("://") == std::string::npos)
+    {
+        uri = "https://" + uri;
     }
 
     BrowserTab* tab = browser_tab_current();
@@ -491,7 +504,7 @@ gtk_box_append(
     GtkCssProvider* styles = gtk_css_provider_new();
     gtk_css_provider_load_from_string(
         styles,
-        ".sidebar { min-width: 188px; max-width: 188px; background: alpha(@theme_fg_color, 0.04); border-right: 1px solid @borders; }"
+        ".sidebar { min-width: 188px; max-width: 188px; background: alpha(@theme_fg_color, 0.04); border-right: 1px solid @borders; transition: min-width 180ms ease, max-width 180ms ease; }"
         ".sidebar.compact { min-width: 48px; max-width: 48px; }"
         ".sidebar.compact .sidebar-toggle { min-width: 32px; max-width: 32px; min-height: 32px; max-height: 32px; padding: 0; }"
         ".brand-name { font-weight: 700; }"

@@ -173,7 +173,6 @@ static void on_sidebar_toggle_clicked(GtkButton* button, gpointer user_data)
     (void)user_data;
 
     sidebar_compact = !sidebar_compact;
-    gtk_widget_set_size_request(sidebar_widget, sidebar_compact ? 48 : 188, -1);
     if (sidebar_compact)
         gtk_widget_add_css_class(sidebar_widget, "compact");
     else
@@ -253,7 +252,6 @@ GtkWidget* create_sidebar()
             8
         );
 
-    gtk_widget_set_size_request(sidebar_widget, 188, -1);
     gtk_widget_set_hexpand(sidebar_widget, FALSE);
     gtk_widget_set_halign(sidebar_widget, GTK_ALIGN_START);
     gtk_widget_add_css_class(sidebar_widget, "sidebar");
