@@ -78,9 +78,9 @@ static void on_tab_title_changed(GObject* object, GParamSpec* pspec, gpointer us
 
 static void update_tab_favicon(BrowserTab* tab)
 {
-    cairo_surface_t* favicon = webkit_web_view_get_favicon(WEBKIT_WEB_VIEW(tab->web_view));
+    GdkTexture* favicon = webkit_web_view_get_favicon(WEBKIT_WEB_VIEW(tab->web_view));
     if (favicon)
-        gtk_image_set_from_surface(GTK_IMAGE(tab->favicon), favicon);
+        gtk_image_set_from_paintable(GTK_IMAGE(tab->favicon), GDK_PAINTABLE(favicon));
     else
         gtk_image_set_from_icon_name(GTK_IMAGE(tab->favicon), "web-browser-symbolic");
 }
