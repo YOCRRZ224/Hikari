@@ -243,7 +243,7 @@ GtkWidget* create_sidebar()
 
     gtk_widget_set_size_request(
         sidebar_widget,
-        240,
+        40,
         -1
     );
     gtk_widget_add_css_class(sidebar_widget, "sidebar");
