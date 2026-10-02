@@ -221,7 +221,12 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
     tab->is_home = is_home;
 
     tab->user_content_manager = userscript_manager_create_content_manager();
-    tab->web_view = webkit_web_view_new_with_user_content_manager(tab->user_content_manager);
+    tab->web_view = GTK_WIDGET(g_object_new(
+        WEBKIT_TYPE_WEB_VIEW,
+        "user-content-manager",
+        tab->user_content_manager,
+        nullptr
+    ));
 
     gtk_widget_set_hexpand(
         tab->web_view,
