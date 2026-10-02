@@ -251,7 +251,6 @@ static BrowserTab* create_tab(const char* uri, bool is_home, bool is_private = f
             nullptr
         ));
     }
-    }
 
     gtk_widget_set_hexpand(
         tab->web_view,
