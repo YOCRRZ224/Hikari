@@ -51,7 +51,7 @@ static void on_tab_close_clicked(GtkButton* button, gpointer user_data)
 static void update_media_controls(BrowserTab* tab)
 {
     WebKitWebView* view = WEBKIT_WEB_VIEW(tab->web_view);
-    const bool playing = webkit_web_view_get_is_playing_audio(view);
+    const bool playing = webkit_web_view_is_playing_audio(view);
     const bool muted = webkit_web_view_get_is_muted(view);
 
     gtk_button_set_label(GTK_BUTTON(tab->play_button), playing ? "Pause media" : "Play media");
@@ -80,7 +80,7 @@ static void on_media_play_clicked(GtkButton* button, gpointer user_data)
     (void)button;
     auto* tab = static_cast<BrowserTab*>(user_data);
     WebKitWebView* view = WEBKIT_WEB_VIEW(tab->web_view);
-    const char* script = webkit_web_view_get_is_playing_audio(view)
+    const char* script = webkit_web_view_is_playing_audio(view)
         ? "document.querySelectorAll('audio,video').forEach(m => m.pause())"
         : "document.querySelectorAll('audio,video').forEach(m => m.play().catch(() => {}))";
     webkit_web_view_evaluate_javascript(view, script, -1, nullptr, nullptr, nullptr, nullptr, nullptr);

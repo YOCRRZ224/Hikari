@@ -434,7 +434,7 @@ gtk_box_append(
     );
 
     GtkCssProvider* styles = gtk_css_provider_new();
-    gtk_css_provider_load_from_data(
+    gtk_css_provider_load_from_string(
         styles,
         ".sidebar { background: alpha(@theme_fg_color, 0.04); border-right: 1px solid @borders; }"
         ".brand-name { font-weight: 700; }"
@@ -447,8 +447,7 @@ gtk_box_append(
         ".load-progress trough, .load-progress progress { min-height: 2px; }"
         ".tab-button { min-height: 38px; padding: 2px 8px; border-radius: 9px; }"
         ".tab-button.selected { background: alpha(@accent_color, 0.15); }"
-        ".tab-button.playing-audio { color: @accent_color; }",
-        -1
+        ".tab-button.playing-audio { color: @accent_color; }"
     );
     gtk_style_context_add_provider_for_display(
         gdk_display_get_default(),
