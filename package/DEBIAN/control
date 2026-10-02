@@ -1,0 +1,8 @@
+Package: hikari
+Version: 0.1.0
+Section: web
+Priority: optional
+Architecture: amd64
+Maintainer: YOCRRZ
+Description: Hikari web browser
+ A lightweight web browser built with GTK4, libadwaita and WebKitGTK.

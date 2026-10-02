@@ -1,5 +1,5 @@
 project(
-  'yocrrz-browser',
+  'Hikari',
   'cpp',
   version: '0.1.0',
   default_options: [
@@ -14,7 +14,7 @@ webkit = dependency('webkitgtk-6.0')
 soup = dependency('libsoup-3.0')
 
 executable(
-  'yocrrz-browser',
+  'hikari',
   [
     'src/main.cpp',
     'src/browser_window.cpp',
@@ -30,4 +30,14 @@ executable(
     soup,
   ],
   install: true,
+)
+
+install_data(
+  'data/hikari.desktop',
+  install_dir: get_option('datadir') / 'applications',
+)
+
+install_data(
+  'data/icons/hicolor/scalable/apps/hikari.svg',
+  install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps',
 )

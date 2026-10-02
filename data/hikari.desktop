@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Hikari
+Comment=A lightweight web browser
+Exec=hikari
+Icon=hikari
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;
+StartupNotify=true
