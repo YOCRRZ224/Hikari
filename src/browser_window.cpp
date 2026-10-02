@@ -1,6 +1,7 @@
 #include "browser_window.hpp"
 #include "sidebar.hpp"
 #include "tab_manager.hpp"
+#include "userscript_manager.hpp"
 #include <algorithm>
 #include <string>
 #include <webkit/webkit.h>
@@ -11,7 +12,14 @@ static GtkWidget* back_button = nullptr;
 static GtkWidget* forward_button = nullptr;
 static GtkWidget* reload_button = nullptr;
 static GtkWindow* browser_window = nullptr;
+static GtkStack* browser_stack = nullptr;
 static bool window_is_fullscreen = false;
+
+static void on_settings_clicked()
+{
+    if (browser_stack)
+        gtk_stack_set_visible_child_name(browser_stack, "settings");
+}
 
 static void on_tab_progress(BrowserTab* tab)
 {
@@ -289,11 +297,15 @@ void on_application_activate(
         create_sidebar();
 
     GtkWidget* tab_stack = gtk_stack_new();
+    browser_stack = GTK_STACK(tab_stack);
     gtk_widget_set_hexpand(tab_stack, TRUE);
     gtk_widget_set_vexpand(tab_stack, TRUE);
     tab_manager_init(tab_stack, sidebar_tab_container());
     tab_manager_set_changed_callback(on_tab_changed);
     tab_manager_set_progress_callback(on_tab_progress);
+    sidebar_set_settings_callback(on_settings_clicked);
+    GtkWidget* settings_page = userscript_manager_create_settings_page(GTK_WINDOW(window));
+    gtk_stack_add_named(GTK_STACK(tab_stack), settings_page, "settings");
 
     gtk_box_append(
         GTK_BOX(root),

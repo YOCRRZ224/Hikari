@@ -12,6 +12,7 @@ struct BrowserTab
     GtkWidget* play_button;
     GtkWidget* mute_button;
     GtkWidget* web_view;
+    WebKitUserContentManager* user_content_manager;
     GtkWidget* content;
     GtkWidget* favicon;
     GtkWidget* label;

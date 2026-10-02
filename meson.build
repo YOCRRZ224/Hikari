@@ -11,6 +11,7 @@ project(
 gtk = dependency('gtk4')
 adwaita = dependency('libadwaita-1')
 webkit = dependency('webkitgtk-6.0')
+soup = dependency('libsoup-3.0')
 
 executable(
   'yocrrz-browser',
@@ -20,11 +21,13 @@ executable(
     'src/sidebar.cpp',
     'src/tab_manager.cpp',
     'src/browser_view.cpp',
+    'src/userscript_manager.cpp',
   ],
   dependencies: [
     gtk,
     adwaita,
     webkit,
+    soup,
   ],
   install: true,
 )

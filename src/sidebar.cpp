@@ -21,7 +21,9 @@ static GtkWidget* bookmark_label = nullptr;
 static GtkWidget* bookmark_section_header = nullptr;
 static GtkWidget* bookmark_revealer = nullptr;
 static GtkWidget* bookmark_section_toggle = nullptr;
+static GtkWidget* settings_label = nullptr;
 static bool sidebar_compact = false;
+static SidebarSettingsCallback settings_callback = nullptr;
 
 struct Bookmark
 {
@@ -167,6 +169,14 @@ static void on_new_tab_clicked(GtkButton* button, gpointer user_data)
     browser_tab_create_home();
 }
 
+static void on_settings_clicked(GtkButton* button, gpointer user_data)
+{
+    (void)button;
+    (void)user_data;
+    if (settings_callback)
+        settings_callback();
+}
+
 static void on_sidebar_toggle_clicked(GtkButton* button, gpointer user_data)
 {
     (void)button;
@@ -183,6 +193,7 @@ static void on_sidebar_toggle_clicked(GtkButton* button, gpointer user_data)
     gtk_widget_set_visible(bookmark_label, !sidebar_compact);
     gtk_widget_set_visible(bookmark_section_header, !sidebar_compact);
     gtk_widget_set_visible(bookmark_revealer, !sidebar_compact);
+    gtk_widget_set_visible(settings_label, !sidebar_compact);
     gtk_widget_set_margin_start(section_header, sidebar_compact ? 4 : 12);
     gtk_widget_set_margin_end(section_header, sidebar_compact ? 4 : 8);
     gtk_widget_set_size_request(section_toggle, sidebar_compact ? 32 : -1, sidebar_compact ? 32 : -1);
@@ -365,6 +376,22 @@ GtkWidget* create_sidebar()
     gtk_revealer_set_child(GTK_REVEALER(bookmark_revealer), bookmark_scroll);
     gtk_box_append(GTK_BOX(sidebar_widget), bookmark_revealer);
 
+    GtkWidget* settings_button = gtk_button_new();
+    GtkWidget* settings_content = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_set_margin_start(settings_content, 8);
+    gtk_widget_set_margin_end(settings_content, 8);
+    gtk_button_set_child(GTK_BUTTON(settings_button), settings_content);
+    gtk_widget_add_css_class(settings_button, "settings-button");
+    gtk_widget_set_tooltip_text(settings_button, "Userscript settings");
+    GtkWidget* settings_icon = gtk_image_new_from_icon_name("emblem-system-symbolic");
+    gtk_box_append(GTK_BOX(settings_content), settings_icon);
+    settings_label = gtk_label_new("Settings");
+    gtk_widget_set_halign(settings_label, GTK_ALIGN_START);
+    gtk_widget_set_hexpand(settings_label, TRUE);
+    gtk_box_append(GTK_BOX(settings_content), settings_label);
+    g_signal_connect(settings_button, "clicked", G_CALLBACK(on_settings_clicked), nullptr);
+    gtk_box_append(GTK_BOX(sidebar_widget), settings_button);
+
     load_bookmarks();
     update_bookmark_button();
 
@@ -374,6 +401,11 @@ GtkWidget* create_sidebar()
 GtkWidget* sidebar_tab_container()
 {
     return tab_list;
+}
+
+void sidebar_set_settings_callback(SidebarSettingsCallback callback)
+{
+    settings_callback = callback;
 }
 
 void sidebar_update_current_tab(BrowserTab* tab)

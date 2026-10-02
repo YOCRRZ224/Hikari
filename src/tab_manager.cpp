@@ -1,4 +1,5 @@
 #include "tab_manager.hpp"
+#include "userscript_manager.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -219,8 +220,8 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
         new BrowserTab{};
     tab->is_home = is_home;
 
-    tab->web_view =
-        webkit_web_view_new();
+    tab->user_content_manager = userscript_manager_create_content_manager();
+    tab->web_view = webkit_web_view_new_with_user_content_manager(tab->user_content_manager);
 
     gtk_widget_set_hexpand(
         tab->web_view,
@@ -345,8 +346,14 @@ void browser_tab_select(
     BrowserTab* tab
 )
 {
-    if (!tab || tab == current_tab)
+    if (!tab)
         return;
+
+    if (tab == current_tab)
+    {
+        gtk_stack_set_visible_child(GTK_STACK(tab_stack), tab->web_view);
+        return;
+    }
 
     if (current_tab)
         gtk_widget_remove_css_class(current_tab->button, "selected");
@@ -379,6 +386,7 @@ void browser_tab_close(BrowserTab* tab)
     g_signal_handlers_disconnect_by_data(tab->web_view, tab);
     gtk_box_remove(GTK_BOX(tab_sidebar), tab->row);
     gtk_stack_remove(GTK_STACK(tab_stack), tab->web_view);
+    userscript_manager_release_content_manager(tab->user_content_manager);
     tabs.erase(found);
 
     if (was_current)
