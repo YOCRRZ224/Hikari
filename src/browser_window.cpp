@@ -195,8 +195,39 @@ static gboolean on_key_pressed(
     (void)keycode;
     (void)user_data;
 
+    if ((state & GDK_ALT_MASK) && !(state & GDK_CONTROL_MASK))
+    {
+        BrowserTab* tab = browser_tab_current();
+        if (!tab)
+            return TRUE;
+
+        WebKitWebView* view = WEBKIT_WEB_VIEW(tab->web_view);
+        if (keyval == GDK_KEY_Left && webkit_web_view_can_go_back(view))
+            webkit_web_view_go_back(view);
+        else if (keyval == GDK_KEY_Right && webkit_web_view_can_go_forward(view))
+            webkit_web_view_go_forward(view);
+        else
+            return FALSE;
+        return TRUE;
+    }
+
     if (!(state & GDK_CONTROL_MASK))
         return FALSE;
+
+    const guint lowered_keyval = gdk_keyval_to_lower(keyval);
+    if (lowered_keyval == GDK_KEY_s && (state & GDK_SHIFT_MASK))
+    {
+        sidebar_toggle_compact();
+        return TRUE;
+    }
+    if (lowered_keyval == GDK_KEY_n)
+    {
+        if (state & GDK_SHIFT_MASK)
+            browser_tab_create_private();
+        else
+            browser_tab_create_home();
+        return TRUE;
+    }
 
     if (keyval == GDK_KEY_ISO_Left_Tab)
     {

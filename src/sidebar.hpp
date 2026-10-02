@@ -7,6 +7,7 @@ using SidebarSettingsCallback = void (*)();
 
 GtkWidget* create_sidebar();
 void sidebar_set_settings_callback(SidebarSettingsCallback callback);
+void sidebar_toggle_compact();
 
 GtkWidget* sidebar_tab_container();
 

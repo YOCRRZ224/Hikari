@@ -12,11 +12,13 @@ struct BrowserTab
     GtkWidget* play_button;
     GtkWidget* mute_button;
     GtkWidget* web_view;
+    WebKitWebContext* web_context;
     WebKitUserContentManager* user_content_manager;
     GtkWidget* content;
     GtkWidget* favicon;
     GtkWidget* label;
     bool is_home;
+    bool is_private;
 };
 
 using BrowserTabChangedCallback = void (*)(BrowserTab* tab);
@@ -44,6 +46,7 @@ BrowserTab* browser_tab_create(
 );
 
 BrowserTab* browser_tab_create_home();
+BrowserTab* browser_tab_create_private();
 
 void browser_tab_select(
     BrowserTab* tab

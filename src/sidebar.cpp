@@ -205,6 +205,11 @@ static void on_sidebar_toggle_clicked(GtkButton* button, gpointer user_data)
     tab_manager_set_sidebar_compact(sidebar_compact);
 }
 
+void sidebar_toggle_compact()
+{
+    on_sidebar_toggle_clicked(GTK_BUTTON(sidebar_toggle), nullptr);
+}
+
 static void on_tab_section_toggled(GtkToggleButton* button, gpointer user_data)
 {
     (void)user_data;

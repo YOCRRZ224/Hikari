@@ -14,6 +14,8 @@ static BrowserTabChangedCallback changed_callback = nullptr;
 static BrowserTabProgressCallback progress_callback = nullptr;
 static unsigned int next_tab_id = 0;
 static bool sidebar_compact = false;
+static WebKitWebContext* private_web_context = nullptr;
+static size_t private_tab_count = 0;
 
 static const char* home_page_html = R"HTML(
 <!doctype html>
@@ -214,19 +216,39 @@ static void on_tab_clicked(
     browser_tab_select(tab);
 }
 
-static BrowserTab* create_tab(const char* uri, bool is_home)
+static BrowserTab* create_tab(const char* uri, bool is_home, bool is_private = false)
 {
     auto* tab =
         new BrowserTab{};
     tab->is_home = is_home;
+    tab->is_private = is_private;
 
     tab->user_content_manager = userscript_manager_create_content_manager();
-    tab->web_view = GTK_WIDGET(g_object_new(
-        WEBKIT_TYPE_WEB_VIEW,
-        "user-content-manager",
-        tab->user_content_manager,
-        nullptr
-    ));
+    if (is_private)
+    {
+        if (!private_web_context)
+            private_web_context = webkit_web_context_new_ephemeral();
+        ++private_tab_count;
+        tab->web_context = private_web_context;
+        tab->web_view = GTK_WIDGET(g_object_new(
+            WEBKIT_TYPE_WEB_VIEW,
+            "web-context",
+            tab->web_context,
+            "user-content-manager",
+            tab->user_content_manager,
+            nullptr
+        ));
+    }
+    else
+    {
+        tab->web_context = webkit_web_context_get_default();
+        tab->web_view = GTK_WIDGET(g_object_new(
+            WEBKIT_TYPE_WEB_VIEW,
+            "user-content-manager",
+            tab->user_content_manager,
+            nullptr
+        ));
+    }
 
     gtk_widget_set_hexpand(
         tab->web_view,
@@ -245,6 +267,14 @@ static BrowserTab* create_tab(const char* uri, bool is_home)
     tab->favicon = gtk_image_new_from_icon_name("web-browser-symbolic");
     gtk_image_set_pixel_size(GTK_IMAGE(tab->favicon), 16);
     gtk_box_append(GTK_BOX(tab->content), tab->favicon);
+
+    if (tab->is_private)
+    {
+        GtkWidget* private_icon = gtk_image_new_from_icon_name("changes-prevent-symbolic");
+        gtk_image_set_pixel_size(GTK_IMAGE(private_icon), 14);
+        gtk_widget_set_tooltip_text(private_icon, "Private tab");
+        gtk_box_append(GTK_BOX(tab->content), private_icon);
+    }
 
     tab->label = gtk_label_new("New Tab");
     gtk_widget_set_visible(tab->label, !sidebar_compact);
@@ -347,6 +377,11 @@ BrowserTab* browser_tab_create_home()
     return create_tab(nullptr, true);
 }
 
+BrowserTab* browser_tab_create_private()
+{
+    return create_tab(nullptr, true, true);
+}
+
 void browser_tab_select(
     BrowserTab* tab
 )
@@ -393,6 +428,9 @@ void browser_tab_close(BrowserTab* tab)
     gtk_stack_remove(GTK_STACK(tab_stack), tab->web_view);
     userscript_manager_release_content_manager(tab->user_content_manager);
     tabs.erase(found);
+
+    if (tab->is_private && --private_tab_count == 0)
+        g_clear_object(&private_web_context);
 
     if (was_current)
     {
