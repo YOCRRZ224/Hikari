@@ -5,7 +5,7 @@
 int main(int argc, char* argv[])
 {
     GtkApplication* app = gtk_application_new(
-        "is.a.dev.yocrrz.Browser",
+        "is.a.dev.yocrrz.Hikari",
         G_APPLICATION_DEFAULT_FLAGS
     );
 

@@ -58,7 +58,7 @@ static std::string trim(std::string value)
 
 static gchar* scripts_directory()
 {
-    gchar* directory = g_build_filename(g_get_user_config_dir(), "yocrrz-browser", "userscripts", nullptr);
+    gchar* directory = g_build_filename(g_get_user_config_dir(), "hikari", "userscripts", nullptr);
     g_mkdir_with_parents(directory, 0700);
     return directory;
 }
@@ -344,7 +344,7 @@ static void on_editor_response(GtkDialog* dialog, int response, gpointer user_da
         script->code = text_view_contents(form->code_view);
         script->enabled = gtk_check_button_get_active(GTK_CHECK_BUTTON(form->enabled_check));
         if (script->source.empty())
-            script->source = "Created in Yocrrz";
+            script->source = "Created in Hikari";
         if (script->matches.empty())
             script->matches.emplace_back("*://*/*");
 
@@ -445,7 +445,7 @@ static void on_new_script_clicked(GtkButton* button, gpointer user_data)
 {
     (void)button;
     (void)user_data;
-    show_script_editor(nullptr, "", "Created in Yocrrz");
+    show_script_editor(nullptr, "", "Created in Hikari");
 }
 
 static void on_import_response(GtkNativeDialog* dialog, int response, gpointer user_data)

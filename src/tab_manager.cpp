@@ -23,7 +23,7 @@ static const char* home_page_html = R"HTML(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>New Tab | Yocrrz</title>
+<title>New Tab | Hikari</title>
 <style>
 :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
 * { box-sizing: border-box; }
@@ -48,7 +48,7 @@ h1 { margin: 12px 0 6px; font-size: 34px; font-weight: 650; }
 </head>
 <body>
 <main>
-<div class="brand">YOCRRZ BROWSER</div>
+<div class="brand">HIKARI</div>
 <h1>Where to next?</h1>
 <p class="date" id="date"></p>
 <form class="search" action="https://www.google.com/search" method="get">

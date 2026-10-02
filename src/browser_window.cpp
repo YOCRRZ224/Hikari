@@ -51,7 +51,7 @@ static void on_tab_changed(BrowserTab* tab)
     );
 
     const char* title = webkit_web_view_get_title(WEBKIT_WEB_VIEW(tab->web_view));
-    gtk_window_set_title(browser_window, title && *title ? title : "Yocrrz Browser");
+    gtk_window_set_title(browser_window, title && *title ? title : "Hikari");
     sidebar_update_current_tab(tab);
 
 }
@@ -311,7 +311,7 @@ void on_application_activate(
 
     gtk_window_set_title(
         GTK_WINDOW(window),
-        "Yocrrz Browser"
+        "Hikari"
     );
 
     GtkWidget* root =

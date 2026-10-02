@@ -10,7 +10,7 @@ class BrowserWindow(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app)
 
-        self.set_title("YOCRRZ Browser")
+        self.set_title("Hikari")
         self.set_default_size(1280, 800)
 
         # =========================
@@ -233,7 +233,7 @@ class BrowserWindow(Adw.ApplicationWindow):
 class BrowserApplication(Adw.Application):
     def __init__(self):
         super().__init__(
-            application_id="is.a.dev.yocrrz.Browser",
+            application_id="is.a.dev.yocrrz.Hikari",
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS
         )
 

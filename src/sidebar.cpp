@@ -36,7 +36,7 @@ static std::list<Bookmark> bookmarks;
 
 static gchar* bookmark_file_path()
 {
-    gchar* directory = g_build_filename(g_get_user_config_dir(), "yocrrz-browser", nullptr);
+    gchar* directory = g_build_filename(g_get_user_config_dir(), "hikari", nullptr);
     g_mkdir_with_parents(directory, 0700);
     gchar* path = g_build_filename(directory, "bookmarks.ini", nullptr);
     g_free(directory);
@@ -285,7 +285,7 @@ GtkWidget* create_sidebar()
     g_signal_connect(sidebar_toggle, "clicked", G_CALLBACK(on_sidebar_toggle_clicked), nullptr);
     gtk_box_append(GTK_BOX(header), sidebar_toggle);
 
-    brand_label = gtk_label_new("Yocrrz");
+    brand_label = gtk_label_new("Hikari");
     gtk_widget_add_css_class(brand_label, "brand-name");
     gtk_widget_set_hexpand(brand_label, TRUE);
     gtk_widget_set_halign(brand_label, GTK_ALIGN_START);
